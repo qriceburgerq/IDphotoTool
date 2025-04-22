@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6961510328762051"
+            crossorigin="anonymous">
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="免費線上證件照工具！快速裁切、排版符合護照、身分證、駕照、簽證等尺寸的照片。支援多種規格，含裁切線，方便自行列印。隱私安全，無需安裝。" data-translate-key="metaDescription">
+    <title data-translate-key="pageTitle">證件照裁切排版工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Huninn&display=swap');
+        /* Add styles for language switcher */
+        .lang-button {
+            @apply px-3 py-1 border border-gray-300 rounded-md text-sm shadow-sm cursor-pointer hover:bg-gray-100;
+        }
+        .lang-button.active {
+            @apply bg-indigo-100 border-indigo-300 text-indigo-700 font-semibold;
+        }
+
+        body {
+            font-family: 'Huninn', 'Noto Sans TC', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        .cropper-container {
+            max-width: 100%;
+            margin-bottom: 1rem;
+        }
+        .img-container {
+            width: 100%;
+            max-height: 50vh; /* Default max height */
+            margin-bottom: 0.5rem;
+            background-color: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            position: relative;
+        }
+        @media (max-width: 767px) {
+            .img-container {
+                max-height: 40vh; /* Reduced max height for mobile */
+            }
+        }
+        img#sourceImage {
+            max-width: 100%;
+            max-height: inherit; /* Inherit max-height from parent */
+            display: block;
+            opacity: 0;
+        }
+        .cropper-crop-box::after,
+        .cropper-crop-box::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--guideline-color, rgba(0, 255, 255, 0.6));
+            pointer-events: none;
+            z-index: 10;
+        }
+        .cropper-crop-box::before {
+            top: var(--guideline1-top, 5.56%);
+            background-color: var(--guideline1-color, rgba(0, 255, 255, 0.6));
+        }
+        .cropper-crop-box::after {
+            top: var(--guideline2-top, 81.11%);
+            display: var(--guideline2-display, block);
+            background-color: var(--guideline2-color, rgba(0, 255, 255, 0.6));
+        }
+
+        .preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+            justify-content: center;
+        }
+        .preview-box {
+            border: 1px solid #d1d5db;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background-color: #ffffff;
+            text-align: center;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 250px;
+        }
+        .preview-box h3 {
+            font-size: 0.875rem;
+            margin-bottom: 0.75rem;
+            color: #4b5563;
+            font-weight: 600;
+        }
+        .preview-box canvas {
+            max-width: 150px;
+            height: auto;
+            display: block;
+            margin: 0 auto 0.75rem auto;
+            border: 1px dashed #9ca3af;
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out;
+        }
+        .preview-box canvas:hover {
+             transform: scale(1.05);
+        }
+        #layoutPreviewBox canvas {
+             max-width: 200px;
+             background-color: #f9fafb;
+        }
+        .download-link {
+            display: inline-block;
+            margin-top: auto;
+            padding: 0.5rem 1rem;
+            background-color: #3b82f6;
+            color: white;
+            text-decoration: none;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            transition: background-color 0.2s;
+        }
+        .download-link:hover {
+            background-color: #2563eb;
+        }
+        .download-link.disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .loader {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .hidden {
+            display: none !important;
+        }
+        .radio-label {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .radio-label:hover {
+            background-color: #f3f4f6;
+        }
+        input[type="radio"]:checked + .radio-label {
+            background-color: #dbeafe;
+            border-color: #3b82f6;
+        }
+        input[type="radio"] {
+            display: none;
+        }
+        #guidelineDescription ul {
+            list-style: none;
+            padding-left: 0;
+            margin-top: 0.25rem;
+        }
+         #guidelineDescription li {
+            margin-bottom: 0.1rem;
+         }
+         footer {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+         }
+         #controlsContainer {
+             display: flex;
+             flex-direction: column;
+             gap: 0.5rem;
+             margin-top: 0.5rem;
+             margin-bottom: 1rem;
+         }
+         @media (min-width: 640px) {
+            #controlsContainer {
+                flex-direction: row;
+                align-items: center;
+                gap: 1rem;
+            }
+         }
+         .control-item {
+             display: flex;
+             align-items: center;
+             width: 100%;
+         }
+         .control-item label {
+             font-size: 0.875rem;
+             color: #4b5563;
+             margin-right: 0.5rem;
+             white-space: nowrap;
+         }
+         .control-item input[type="range"] {
+            cursor: pointer;
+            flex-grow: 1;
+            accent-color: #2563eb;
+         }
+         .guideline-color-text {
+             color: #0891b2;
+             font-weight: 600;
+         }
+         .domain-error-message {
+             padding: 20px;
+             text-align: center;
+             color: red;
+             font-size: 1.2em;
+             font-weight: bold;
+             position: fixed;
+             top: 0;
+             left: 0;
+             width: 100%;
+             height: 100%;
+             background-color: white;
+             z-index: 9999;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+         }
+         .info-box {
+            background-color: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+         }
+         .info-box ul {
+             list-style-type: disc;
+             padding-left: 1.5rem;
+         }
+          .info-box li {
+            margin-bottom: 0.25rem;
+         }
+         #dropZone {
+            border: 2px dashed #d1d5db;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            background-color: #f9fafb;
+            transition: background-color 0.2s, border-color 0.2s;
+         }
+         #dropZone:hover {
+            background-color: #f3f4f6;
+            border-color: #9ca3af;
+         }
+         #dropZone.drag-over {
+            background-color: #dbeafe;
+            border-color: #3b82f6;
+            border-style: solid;
+         }
+         #imageUpload {
+             opacity: 0;
+             position: absolute;
+             z-index: -1;
+             width: 0.1px;
+             height: 0.1px;
+             overflow: hidden;
+         }
+         #dropZone p {
+            color: #6b7280;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+         }
+         #dropZone svg {
+            width: 3rem;
+            height: 3rem;
+            margin: 0 auto 0.5rem auto;
+            color: #9ca3af;
+         }
+        #imageModal {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            padding: 1rem;
+        }
+        #imageModal:not(.hidden) {
+             display: flex;
+        }
+        #modalContent {
+            background-color: #808080;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            max-width: 90vw;
+            max-height: 85vh;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #modalImage {
+            display: block;
+            max-width: 100%;
+            max-height: calc(85vh - 6rem);
+            object-fit: contain;
+            margin: 0 auto;
+        }
+        #closeModalButton {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.75rem;
+            font-size: 1.875rem;
+            font-weight: bold;
+            color: #FFFFFF;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0.25rem;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        #closeModalButton:hover {
+            color: #e5e7eb;
+        }
+
+    </style>
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6961510328762051"
+         crossorigin="anonymous"></script>
+
+</head>
+<body class="bg-gray-100 p-4 md:p-8">
+
+    <div id="mainContainer" class="container mx-auto max-w-4xl bg-white p-6 md:p-8 rounded-lg shadow-lg">
+        <div class="text-right mb-4">
+            <button id="lang-zh-Hant" class="lang-button active" data-lang="zh-Hant">繁體中文</button>
+            <button id="lang-en" class="lang-button" data-lang="en">English</button>
+        </div>
+
+        <main>
+            <h1 class="text-2xl md:text-3xl font-bold text-center mb-3 text-gray-800" data-translate-key="mainTitle">照片裁切與排版工具 (多尺寸)</h1>
+
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm space-y-4">
+                <div class="text-left text-gray-700">
+                    <h2 class="text-base font-bold mb-2 text-blue-800" data-translate-key="toolDescriptionTitle">工具說明</h2>
+                    <p class="mb-2 leading-relaxed text-blue-900" data-translate-key="toolDescriptionText1">這是一個免費的線上證件照工具，協助您快速將照片裁切、排版成符合護照、身分證、駕照等標準尺寸。所有操作都在您的瀏覽器完成，無需安裝軟體，確保個人隱私安全。</p>
+                    <p class="leading-relaxed text-blue-900" data-translate-key="toolDescriptionText2">上傳照片後，選擇所需尺寸，利用拖曳、縮放功能輕鬆調整範圍，並可參考輔助線對齊。完成後即可下載單張證件照，或適合 4x6 相紙列印的排版檔，方便自行沖印。</p>
+                </div>
+
+                <div class="text-left text-gray-700">
+                    <h2 class="text-base font-bold mb-2 text-blue-800" data-translate-key="howToUseTitle">如何使用</h2>
+                    <ol class="list-decimal list-inside space-y-1 pl-4 text-blue-900">
+                        <li class="mb-1" data-translate-key="howToStep1">選擇需要的證件照尺寸。</li>
+                        <li class="mb-1" data-translate-key="howToStep2">點擊或拖曳照片至上傳區。</li>
+                        <li class="mb-1" data-translate-key="howToStep3">載入照片後，調整裁切框、縮放或旋轉，使臉部符合輔助線提示。</li>
+                        <li class="mb-1" data-translate-key="howToStep4">點擊「確定裁切並產生圖片」按鈕。</li>
+                        <li class="mb-1" data-translate-key="howToStep5">於下方預覽結果，點擊縮圖可放大確認。</li>
+                        <li class="mb-1" data-translate-key="howToStep6">點擊下載按鈕，儲存單張或 4x6 排版照片。</li>
+                    </ol>
+                </div>
+
+                <div class="text-left text-gray-700">
+                    <h2 class="text-base font-bold mb-2 text-blue-800" data-translate-key="featuresTitle">功能特色</h2>
+                    <ul class="list-disc list-inside space-y-1 pl-4 text-blue-900">
+                        <li class="mb-1" data-translate-key="feature1">支援多種常用證件照規格。</li>
+                        <li class="mb-1" data-translate-key="feature2">提供臉部參考輔助線。</li>
+                        <li class="mb-1" data-translate-key="feature3">易用的裁切、縮放、旋轉介面。</li>
+                        <li class="mb-1" data-translate-key="feature4">產生符合尺寸的單張照片。</li>
+                        <li class="mb-1" data-translate-key="feature5">產生含裁切線的 4x6 排版照片。</li>
+                        <li class="mb-1" data-translate-key="feature6">純客戶端處理，保障照片隱私。</li>
+                        <li class="mb-1" data-translate-key="feature7">完全免費。</li>
+                    </ul>
+                </div>
+                <div class="text-left text-gray-700">
+                    <h2 class="text-base font-bold mb-2 text-blue-800" data-translate-key="passportPhotoRequirementsTitle">護照照片人物規範參考</h2>
+                    <ul class="list-disc list-inside space-y-1 pl-4 text-blue-900">
+                        <li class="mb-1" data-translate-key="reqRule1">需完整露出清晰的五官，包含眉毛、耳朵輪廓。</li>
+                        <li class="mb-1" data-translate-key="reqRule2">表情自然不誇張且嘴巴閉合（不可露齒）。</li>
+                        <li class="mb-1" data-translate-key="reqRule3">不可配戴飾品（如耳環、頭飾等）。</li>
+                        <li class="mb-1" data-translate-key="reqRule4">僅允許配戴透明鏡片的無框眼鏡，並注意鏡片反光。</li>
+                        <li class="mb-1" data-translate-key="reqRule5">建議勿穿著白色或淺色上衣，避免與背景顏色相近。</li>
+                    </ul>
+                    <p class="mt-2 text-xs text-blue-800" data-translate-key="reqNote">注意：此為一般性參考，各國或地區可能有更詳細的規定，請以官方最新公告為準。</p>
+                </div>
+            </div>
+
+            <div class="text-center mb-6">
+                <p class="text-sm text-gray-600 mb-1" data-translate-key="subtitle3">使用該網站不會收取任何費用，但會有一些不影響使用的小小廣告支持開發；若廣告嚴重影響到使用體驗，請隨時與我聯絡。</p>
+                <p class="text-sm text-gray-600">
+                    <span data-translate-key="subtitle4_part1">本業是平面攝影師，專職婚禮、婚紗攝影，有空支持一下喇～ </span>
+                    <a href="https://www.rice-photo.com/" target="_blank" class="text-blue-600 hover:underline" data-translate-key="officialWebsiteLink">官方網站</a>
+                </p>
+            </div>
+
+
+            <div class="mb-6">
+                <h2 class="text-lg font-semibold mb-2 text-gray-700" data-translate-key="step1Title">1. 選擇照片尺寸:</h2>
+                <div id="sizeSelection" class="flex flex-wrap">
+                    <input type="radio" name="photoSize" value="passport" id="sizePassport" checked>
+                    <label for="sizePassport" class="radio-label" data-translate-key="sizePassportLabel">2吋(大頭) (3.5x4.5cm)</label>
+
+                    <input type="radio" name="photoSize" value="passport_large" id="sizePassportLarge">
+                    <label for="sizePassportLarge" class="radio-label" data-translate-key="sizePassportLargeLabel">2吋(半身) (4.2x4.7cm)</label>
+
+                    <input type="radio" name="photoSize" value="one_inch" id="sizeOneInch">
+                    <label for="sizeOneInch" class="radio-label" data-translate-key="sizeOneInchLabel">1吋 (2.8x3.5cm)</label>
+
+                    <input type="radio" name="photoSize" value="us_visa" id="sizeUsVisa">
+                    <label for="sizeUsVisa" class="radio-label" data-translate-key="sizeUsVisaLabel">5X5</label>
+                </div>
+                <div class="info-box">
+                    <strong data-translate-key="sizeSuggestionTitle">常用證件對應尺寸建議：</strong>
+                    <ul>
+                        <li data-translate-key="suggestionPassport"><strong>2吋(大頭)：</strong>護照、台胞證、台灣身份證</li>
+                        <li data-translate-key="suggestionPassportLarge"><strong>2吋(半身)：</strong>台灣健保卡、履歷、國際駕照、多數體檢表</li>
+                        <li data-translate-key="suggestionOneInch"><strong>1吋：</strong>台灣駕照、多數專業證照、身心障礙手冊</li>
+                        <li data-translate-key="suggestionUsVisa"><strong>5X5：</strong>美國簽證、美國護照、綠卡申辦</li>
+                    </ul>
+                    <p class="mt-2" data-translate-key="suggestionNote">※ 請注意：特殊規定或用途請以官方要求為準。</p>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                 <h2 class="text-lg font-semibold mb-2 text-gray-700" data-translate-key="step2Title">2. 上傳照片:</h2>
+                 <div id="dropZone">
+                     <input type="file" id="imageUpload" accept="image/*">
+                     <label for="imageUpload" class="cursor-pointer">
+                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
+                         </svg>
+                         <div data-translate-key="dropZoneText1">將照片拖曳到此處</div>
+                         <p><span data-translate-key="dropZoneText2">或</span> <span class="text-blue-600 font-semibold" data-translate-key="dropZoneText3">點擊選擇檔案</span></p>
+                     </label>
+                 </div>
+                 <p class="mt-1 text-xs text-gray-500" data-translate-key="uploadNote">請選擇您要處理的圖片檔案。</p>
+            </div>
+
+            <div id="cropSection" class="mb-6 hidden">
+                <h2 class="text-lg font-semibold mb-2 text-gray-700" data-translate-key="step3Title">3. 調整裁切範圍:</h2>
+                 <p class="text-sm text-gray-600 mb-1" data-translate-key="cropInstruction">請拖曳選框調整範圍，或拖曳圖片移動位置。</p>
+                <p id="guidelineDescription" class="text-sm text-gray-600 mb-4"></p>
+                <div class="img-container">
+                    <img id="sourceImage" alt="[待裁切的圖片]">
+                </div>
+                <div id="controlsContainer">
+                    <div class="control-item">
+                         <label for="zoomSlider" data-translate-key="zoomLabel">縮放:</label>
+                         <input type="range" id="zoomSlider" min="0" max="100" value="50">
+                    </div>
+                    <div class="control-item">
+                         <label for="rotateSlider" data-translate-key="rotateLabel">旋轉:</label>
+                         <input type="range" id="rotateSlider" min="-45" max="45" value="0">
+                    </div>
+                </div>
+                <div class="mt-4 mb-4 text-left">
+                    <input type="checkbox" id="removeQrCheckbox" name="removeQr" class="mr-2 rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 align-middle">
+                    <label for="removeQrCheckbox" class="text-sm text-gray-700 select-none cursor-pointer align-middle" data-translate-key="removeQrLabel">我有點擊廣告支持，請不要在排版照片中出現小小的QRCODE♥️</label>
+                </div>
+                <button id="cropButton" class="w-full md:w-auto px-6 py-2 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed" data-translate-key="cropButton">
+                    確定裁切並產生圖片
+                </button>
+            </div>
+
+            <div id="loadingIndicator" class="hidden text-center py-4">
+                 <div class="loader"></div>
+                 <p class="text-gray-600" data-translate-key="loadingText">處理中，請稍候...</p>
+            </div>
+
+            <div id="resultSection" class="hidden">
+                <h2 class="text-lg font-semibold mb-2 text-gray-700" data-translate-key="step4Title">4. 結果預覽與下載 (點擊縮圖可放大):</h2>
+                 <p class="text-sm text-gray-600 mb-4" data-translate-key="cropInstruction1">有些APP（如LINE）內建的瀏覽器會阻擋下載功能，建議使用手機瀏覽器開啟，如Safari、Chrome、Edge、Brave、Firefox等等</p>
+                 <div class="preview-container">
+                    <div id="borderedPreviewBox" class="preview-box hidden">
+                        <h3 data-translate-key="previewSingleTitle">單張照片</h3>
+                        <canvas id="borderedCanvas"></canvas>
+                        <a id="downloadBordered" href="#" download="photo_single_漢堡影像.png" class="download-link disabled" data-translate-key="downloadSingleButton">下載單張照片</a>
+                    </div>
+                    <div id="layoutPreviewBox" class="preview-box hidden">
+                        <h3 data-translate-key="previewLayoutTitle">排版照片</h3>
+                        <canvas id="layoutCanvas"></canvas>
+                        <a id="downloadLayout" href="#" download="photo_layout_cutlines_漢堡影像.png" class="download-link disabled" data-translate-key="downloadLayoutButton">下載排版照片</a>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <footer>
+            <p class="text-xs text-gray-500 text-left mt-2 mb-1" data-translate-key="maintenanceInfo">系統維護：Rice漢堡影像紀實 rice.burger.photo@gmail.com</p>
+            <p class="text-xs text-gray-500 text-center">
+                <span data-translate-key="copyrightLine1">© 2025 Rice漢堡影像紀實 版權所有。本工具僅供個人非商業用途使用。</span><br>
+                <span data-translate-key="copyrightLine2">工具程式碼受智慧財產權保護，禁止未經授權的複製、修改、散布或用於任何商業目的。</span>
+            </p>
+        </footer>
+
+    </div>
+
+    <div id="imageModal" class="hidden">
+        <div id="modalContent">
+            <span id="closeModalButton">&times;</span>
+            <img id="modalImage" src="" alt="放大預覽">
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', (event) => {
+
+        const allowedDomains = [
+            "rice-photo-tool.web.app",
+            "rice-photo-tool.firebaseapp.com",
+            "localhost"
+        ];
+        const currentDomain = window.location.hostname;
+
+            const sizeSelectionContainer = document.getElementById('sizeSelection');
+            const imageUpload = document.getElementById('imageUpload');
+            const dropZone = document.getElementById('dropZone');
+            const sourceImage = document.getElementById('sourceImage');
+            const imgContainer = document.querySelector('.img-container');
+            const cropSection = document.getElementById('cropSection');
+            const guidelineDescription = document.getElementById('guidelineDescription');
+            const cropButton = document.getElementById('cropButton');
+            const resultSection = document.getElementById('resultSection');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const borderedPreviewBox = document.getElementById('borderedPreviewBox');
+            const borderedCanvas = document.getElementById('borderedCanvas');
+            const downloadBordered = document.getElementById('downloadBordered');
+            const layoutPreviewBox = document.getElementById('layoutPreviewBox');
+            const layoutCanvas = document.getElementById('layoutCanvas');
+            const downloadLayout = document.getElementById('downloadLayout');
+            const rootStyle = document.documentElement.style;
+            const zoomSlider = document.getElementById('zoomSlider');
+            const rotateSlider = document.getElementById('rotateSlider');
+            const imageModal = document.getElementById('imageModal');
+            const modalContent = document.getElementById('modalContent');
+            const modalImage = document.getElementById('modalImage');
+            const closeModalButton = document.getElementById('closeModalButton');
+            const removeQrCheckbox = document.getElementById('removeQrCheckbox');
+            const langButtons = document.querySelectorAll('.lang-button');
+
+            let cropper = null;
+            let originalFileName = 'image';
+            let croppedCanvasForLayout = null;
+            let currentSize = 'passport';
+            let currentDimensions = {};
+            let previousSliderValue = 50;
+            let currentLang = 'zh-Hant';
+
+            const DPI = 350;
+            const INCH_TO_CM = 2.54;
+            const BORDER_CM = 0.15;
+            const BORDER_PX = Math.round((BORDER_CM / INCH_TO_CM) * DPI);
+            const GRID_LEFT_MARGIN_CM = 0.1;
+            const GRID_LEFT_MARGIN_PX = Math.round((GRID_LEFT_MARGIN_CM / INCH_TO_CM) * DPI);
+            const RIGHT_MARGIN_CM = 0.5;
+            const RIGHT_MARGIN_PX = Math.round((RIGHT_MARGIN_CM / INCH_TO_CM) * DPI);
+            const BOTTOM_MARGIN_CM = 1.0;
+            const BOTTOM_MARGIN_PX = Math.round((BOTTOM_MARGIN_CM / INCH_TO_CM) * DPI);
+
+            const ALT_ROTATED_INSET_MARGIN_PX = BORDER_PX;
+            const ALT_ROTATED_RIGHT_INSET_MARGIN_PX = ALT_ROTATED_INSET_MARGIN_PX / 2;
+            const ALT_ROTATED_BOTTOM_MARGIN_CM = 0.5;
+            const ALT_ROTATED_BOTTOM_MARGIN_PX = Math.round((ALT_ROTATED_BOTTOM_MARGIN_CM / INCH_TO_CM) * DPI);
+            const ALT_ROTATED_QR_TEXT_GAP_CM = 0.2;
+            const ALT_ROTATED_QR_TEXT_GAP_PX = Math.round((ALT_ROTATED_QR_TEXT_GAP_CM / INCH_TO_CM) * DPI);
+
+            const guidelineColorText = '<span class="guideline-color-text">青藍色輔助線</span>';
+            const guidelineColorTextEn = '<span class="guideline-color-text">cyan guide line</span>';
+
+            // --- Translations Object (Added metaDescription) ---
+            const translations = {
+                'zh-Hant': {
+                    pageTitle: "Rice漢堡影像紀實-證件照裁切排版工具",
+                    metaDescription: "免費線上證件照工具！快速裁切、排版符合護照、身分證、駕照、簽證等尺寸的照片。支援多種規格，含裁切線，方便自行列印。隱私安全，無需安裝。", // Added
+                    mainTitle: "照片裁切與排版工具 (多尺寸)",
+                    subtitle3: "使用該網站不會收取任何費用，但會有一些不影響使用的小小廣告支持開發；若廣告嚴重影響到使用體驗，請隨時與我聯絡。",
+                    subtitle4_part1: "本業是平面攝影師，專職婚禮、婚紗攝影，有空支持一下喇～ ",
+                    officialWebsiteLink: "官方網站",
+                    toolDescriptionTitle: "工具說明",
+                    toolDescriptionText1: "這是一個免費的線上證件照工具，協助您快速將照片裁切、排版成符合護照、身分證、駕照等標準尺寸。所有操作都在您的瀏覽器完成，無需安裝軟體，確保個人隱私安全。",
+                    toolDescriptionText2: "上傳照片後，選擇所需尺寸，利用拖曳、縮放功能輕鬆調整範圍，並可參考輔助線對齊。完成後即可下載單張證件照，或適合 4x6 相紙列印的排版檔，方便自行沖印。",
+                    howToUseTitle: "如何使用",
+                    howToStep1: "選擇需要的證件照尺寸。",
+                    howToStep2: "點擊或拖曳照片至上傳區。",
+                    howToStep3: "載入照片後，調整裁切框、縮放或旋轉，使臉部符合輔助線提示。",
+                    howToStep4: "點擊「確定裁切並產生圖片」按鈕。",
+                    howToStep5: "於下方預覽結果，點擊縮圖可放大確認。",
+                    howToStep6: "點擊下載按鈕，儲存單張或 4x6 排版照片。",
+                    featuresTitle: "功能特色",
+                    feature1: "支援多種常用證件照規格。",
+                    feature2: "提供臉部參考輔助線。",
+                    feature3: "易用的裁切、縮放、旋轉介面。",
+                    feature4: "產生符合尺寸的單張照片。",
+                    feature5: "產生含裁切線的 4x6 排版照片。",
+                    feature6: "純客戶端處理，保障照片隱私。",
+                    feature7: "完全免費。",
+                    passportPhotoRequirementsTitle: "護照照片人物規範參考",
+                    reqRule1: "需完整露出清晰的五官，包含眉毛、耳朵輪廓。",
+                    reqRule2: "表情自然不誇張且嘴巴閉合（不可露齒）。",
+                    reqRule3: "不可配戴飾品（如耳環、頭飾等）。",
+                    reqRule4: "僅允許配戴透明鏡片的無框眼鏡，並注意鏡片反光。",
+                    reqRule5: "建議勿穿著白色或淺色上衣，避免與背景顏色相近。",
+                    reqNote: "注意：此為一般性參考，各國或地區可能有更詳細的規定，請以官方最新公告為準。",
+                    step1Title: "1. 選擇照片尺寸:",
+                    sizePassportLabel: "2吋(大頭) (3.5x4.5cm)",
+                    sizePassportLargeLabel: "2吋(半身) (4.2x4.7cm)",
+                    sizeOneInchLabel: "1吋 (2.8x3.5cm)",
+                    sizeUsVisaLabel: "5X5",
+                    sizeSuggestionTitle: "常用證件對應尺寸建議：",
+                    suggestionPassport: "<strong>2吋(大頭)：</strong>護照、台胞證、台灣身份證",
+                    suggestionPassportLarge: "<strong>2吋(半身)：</strong>台灣健保卡、履歷、國際駕照、多數體檢表",
+                    suggestionOneInch: "<strong>1吋：</strong>台灣駕照、多數專業證照、身心障礙手冊",
+                    suggestionUsVisa: "<strong>5X5：</strong>美國簽證、美國護照、綠卡申辦",
+                    suggestionNote: "※ 請注意：特殊規定或用途請以官方要求為準。",
+                    step2Title: "2. 上傳照片:",
+                    dropZoneText1: "將照片拖曳到此處",
+                    dropZoneText2: "或",
+                    dropZoneText3: "點擊選擇檔案",
+                    uploadNote: "請選擇您要處理的圖片檔案。",
+                    step3Title: "3. 調整裁切範圍:",
+                    cropInstruction: "請拖曳選框調整範圍，或拖曳圖片移動位置。",
+                    cropInstruction1: "有些APP（如LINE）內建的瀏覽器會阻擋下載功能，建議使用手機瀏覽器開啟，如Safari、Chrome、Edge、Brave、Firefox等等",
+                    zoomLabel: "縮放:",
+                    rotateLabel: "旋轉:",
+                    removeQrLabel: "我有點擊廣告支持，請不要在排版照片中出現小小的QRCODE♥️",
+                    cropButton: "確定裁切並產生圖片",
+                    loadingText: "處理中，請稍候...",
+                    step4Title: "4. 結果預覽與下載 (點擊縮圖可放大):",
+                    previewSingleTitle: "單張照片",
+                    downloadSingleButton: "下載單張照片",
+                    previewLayoutTitle: "排版照片",
+                    downloadLayoutButton: "下載排版照片",
+                    maintenanceInfo: "系統維護：Rice漢堡影像紀實 rice.burger.photo@gmail.com",
+                    copyrightLine1: "© 2025 Rice漢堡影像紀實 版權所有。本工具僅供個人非商業用途使用。",
+                    copyrightLine2: "工具程式碼受智慧財產權保護，禁止未經授權的複製、修改、散布或用於任何商業目的。",
+                    guidelineDescPassport: `框內輔助線：請將上方 ${guidelineColorText} 對齊頭頂，下方 ${guidelineColorText} 對齊下巴。`,
+                    guidelineDescOther: `框內輔助線：請將上方 ${guidelineColorText} 對齊頭頂，下方 ${guidelineColorText} 為臉部參考線。`,
+                    modalImageAlt: "放大預覽",
+                    brandText: "Rice漢堡影像紀實",
+                    alertInvalidFile: "請選擇或拖曳有效的圖片檔案 (例如 JPG, PNG, GIF)。",
+                    alertReadFileError: "讀取圖片檔案時發生錯誤，請檢查檔案是否損毀或更換檔案。",
+                    alertProcessingError: "處理圖片時發生錯誤:",
+                    alertTryAgain: "請嘗試重新整理頁面或更換圖片。",
+                    modalError: "預覽圖片時發生錯誤。",
+                    errorGetCroppedImage: "無法獲取有效的裁切圖片 (裁切畫布無效)。",
+                    errorGenerateBordered: "無法產生有效的帶白邊圖片 (帶邊框畫布無效)。"
+                },
+                'en': {
+                    pageTitle: "Rice Burger Photo - ID Photo Cropping & Layout Tool",
+                    metaDescription: "Free online ID photo tool! Quickly crop and arrange photos for passport, ID card, driver's license, visa sizes, and more. Supports multiple specs with cut lines for easy printing. Privacy safe, no installation needed.", // Added
+                    mainTitle: "Photo Cropping & Layout Tool (Multi-Size)",
+                    subtitle3: "This website is free to use, but includes minor, non-intrusive ads to support development. If ads severely impact your experience, please contact me.",
+                    subtitle4_part1: "My main business is professional photography (weddings, portraits). Feel free to check out my ",
+                    officialWebsiteLink: "Official Website",
+                    toolDescriptionTitle: "Tool Description",
+                    toolDescriptionText1: "A free online ID photo tool to help you quickly crop and arrange photos to standard sizes (passport, ID card, driver's license, visa, etc.). No software needed, works in your browser, ensuring privacy.",
+                    toolDescriptionText2: "Upload your photo, choose the size, easily adjust the crop area with drag/zoom using guidelines. Download the single ID photo or a 4x6 print-ready layout.",
+                    howToUseTitle: "How to Use",
+                    howToStep1: "Select the required ID photo size.",
+                    howToStep2: "Click the upload area or drag & drop your photo.",
+                    howToStep3: "Adjust the crop box, zoom, or rotate to align the face with guidelines.",
+                    howToStep4: "Click the 'Crop & Generate Images' button.",
+                    howToStep5: "Preview the results below (click thumbnails to enlarge).",
+                    howToStep6: "Click download buttons to save the single or 4x6 layout photo.",
+                    featuresTitle: "Features",
+                    feature1: "Supports various common ID photo sizes.",
+                    feature2: "Facial reference guidelines for alignment.",
+                    feature3: "Intuitive crop, zoom, and rotate interface.",
+                    feature4: "Generates single photos in the correct size.",
+                    feature5: "Generates 4x6 layout photos with cut lines.",
+                    feature6: "Client-side processing ensures photo privacy.",
+                    feature7: "Completely free.",
+                    passportPhotoRequirementsTitle: "Passport Photo Requirements (Reference)",
+                    reqRule1: "Clear view of all facial features, including eyebrows and ears.",
+                    reqRule2: "Natural expression, mouth closed (no teeth showing).",
+                    reqRule3: "No accessories (earrings, headwear, etc.).",
+                    reqRule4: "only clear, frameless glasses allowed; watch for reflections.",
+                    reqRule5: "Avoid white or light-colored tops similar to the background.",
+                    reqNote: "Note: These are general guidelines. Specific countries may have detailed requirements. Please refer to official announcements.",
+                    step1Title: "1. Select Photo Size:",
+                    sizePassportLabel: "2-inch (Head) (3.5x4.5cm)",
+                    sizePassportLargeLabel: "2-inch (Half-body) (4.2x4.7cm)",
+                    sizeOneInchLabel: "1-inch (2.8x3.5cm)",
+                    sizeUsVisaLabel: "5x5",
+                    sizeSuggestionTitle: "Common ID Size Suggestions:",
+                    suggestionPassport: "<strong>2-inch (Head):</strong> Passport, Mainland Travel Permit, ID Card",
+                    suggestionPassportLarge: "<strong>2-inch (Half-body):</strong> Health Insurance Card, Resume, International Driver's License, Most Medical Forms",
+                    suggestionOneInch: "<strong>1-inch:</strong> Driver's License, Most Professional Licenses, Disability Card",
+                    suggestionUsVisa: "<strong>5X5:</strong> US Visa, US Passport, Green Card Application",
+                    suggestionNote: "※ Note: Please refer to official requirements for specific regulations or uses.",
+                    step2Title: "2. Upload Photo:",
+                    dropZoneText1: "Drag & drop photo here",
+                    dropZoneText2: "or",
+                    dropZoneText3: "Click to select file",
+                    uploadNote: "Please select the image file you want to process.",
+                    step3Title: "3. Adjust Crop Area:",
+                    cropInstruction: "Drag the crop box to adjust the area, or drag the image to move its position.",
+                    cropInstruction1: "The built-in browser of some apps (such as LINE) will block the download function. It is recommended to use a mobile browser to open it, such as Safari, Chrome, Edge, Brave, Firefox, etc.",
+                    zoomLabel: "Zoom:",
+                    rotateLabel: "Rotate:",
+                    removeQrLabel: "I've supported via ads, please don't show the QR code on the layout ♥️",
+                    cropButton: "Crop & Generate Images",
+                    loadingText: "Processing, please wait...",
+                    step4Title: "4. Preview & Download (Click thumbnail to enlarge):",
+                    previewSingleTitle: "Single Photo",
+                    downloadSingleButton: "Download Single Photo",
+                    previewLayoutTitle: "Layout Photo",
+                    downloadLayoutButton: "Download Layout Photo",
+                    maintenanceInfo: "System Maintenance: Rice Burger Photo rice.burger.photo@gmail.com",
+                    copyrightLine1: "© 2025 Rice Burger Photo. All rights reserved. This tool is for personal, non-commercial use only.",
+                    copyrightLine2: "The tool's code is protected by intellectual property rights. Unauthorized copying, modification, distribution, or use for any commercial purpose is prohibited.",
+                    guidelineDescPassport: `Guideline: Align the top ${guidelineColorTextEn} with the top of the head, and the bottom ${guidelineColorTextEn} with the chin.`,
+                    guidelineDescOther: `Guideline: Align the top ${guidelineColorTextEn} with the top of the head, the bottom ${guidelineColorTextEn} is a face reference line.`,
+                    modalImageAlt: "Enlarged Preview",
+                    brandText: "Rice Burger Photo",
+                    alertInvalidFile: "Please select or drag a valid image file (e.g., JPG, PNG, GIF).",
+                    alertReadFileError: "Error reading the image file. Please check if the file is corrupted or try another file.",
+                    alertProcessingError: "Error processing image:",
+                    alertTryAgain: "Please try refreshing the page or using a different image.",
+                    modalError: "Error previewing image.",
+                    errorGetCroppedImage: "Could not get a valid cropped image (invalid cropped canvas).",
+                    errorGenerateBordered: "Could not generate a valid bordered image (invalid bordered canvas)."
+                }
+            };
+
+            const photoConfig = {
+                 passport: { cmW: 3.5, cmH: 4.5, layoutCols: 3, layoutRows: 2, guide1: 0.25, guide2: 3.65, name: 'passport', sizeString: '3.5X4.5', descKey: 'guidelineDescPassport' },
+                 passport_large: { cmW: 4.2, cmH: 4.7, layoutCols: 3, layoutRows: 2, guide1: 0.25, guide2: 0.66, name: 'passport_large', sizeString: '4.2X4.7', descKey: 'guidelineDescOther' },
+                 one_inch: { cmW: 2.8, cmH: 3.5, layoutCols: 3, layoutRows: 2, guide1: 0.25, guide2: 0.66, name: '1inch', sizeString: '2.8X3.5', descKey: 'guidelineDescOther' },
+                 us_visa:  { cmW: 5.0, cmH: 5.0, layoutCols: 2, layoutRows: 1, guide1: 0.25, guide2: 3.65, name: 'usvisa', sizeString: '5X5', descKey: 'guidelineDescPassport' }
+            };
+
+            function translatePage(lang) {
+                if (!translations[lang]) {
+                    console.warn(`Language ${lang} not found, defaulting to zh-Hant.`);
+                    lang = 'zh-Hant';
+                }
+                currentLang = lang;
+                document.documentElement.lang = lang;
+
+                document.querySelectorAll('[data-translate-key]').forEach(element => {
+                    const key = element.dataset.translateKey;
+                    const translation = translations[lang][key];
+                    if (translation !== undefined) {
+                         if (key.startsWith('suggestion')) {
+                             element.innerHTML = translation; // Keep allowing HTML for suggestions
+                         } else if (key === 'metaDescription') {
+                             // Set content attribute for meta tag
+                             if (element.tagName === 'META') {
+                                 element.setAttribute('content', translation);
+                             }
+                         } else if (element.tagName === 'TITLE') {
+                            element.textContent = translation;
+                         } else if (element.tagName === 'INPUT' && element.placeholder) {
+                             element.placeholder = translation;
+                         } else if (element.tagName === 'IMG' && element.alt) {
+                             element.alt = translation;
+                         }
+                         else {
+                            element.textContent = translation;
+                         }
+                    } else {
+                        console.warn(`Translation key "${key}" not found for language "${lang}".`);
+                    }
+                });
+
+                updateGuidelineDescription();
+
+                langButtons.forEach(button => {
+                    if (button.dataset.lang === lang) {
+                        button.classList.add('active');
+                    } else {
+                        button.classList.remove('active');
+                    }
+                });
+
+                 try {
+                     localStorage.setItem('preferredLang', lang);
+                 } catch (e) {
+                     console.warn("Could not save language preference to localStorage.");
+                 }
+            }
+
+            function updateGuidelineDescription() {
+                const config = photoConfig[currentSize];
+                 if (config && config.descKey && translations[currentLang] && translations[currentLang][config.descKey]) {
+                     guidelineDescription.innerHTML = translations[currentLang][config.descKey];
+                 } else if (config && config.descKey && translations['zh-Hant'] && translations['zh-Hant'][config.descKey]) {
+                     guidelineDescription.innerHTML = translations['zh-Hant'][config.descKey];
+                 }
+                 else {
+                     guidelineDescription.innerHTML = "";
+                 }
+            }
+
+
+            function updateConfigAndDimensions(size) {
+                currentSize = size;
+                const config = photoConfig[size];
+                if (!config) {
+                    console.error("選擇了無效的尺寸:", size);
+                    return;
+                }
+
+                const cropW = Math.round((config.cmW / INCH_TO_CM) * DPI);
+                const cropH = Math.round((config.cmH / INCH_TO_CM) * DPI);
+
+                currentDimensions = {
+                    cmW: config.cmW,
+                    cmH: config.cmH,
+                    cropW_px: cropW,
+                    cropH_px: cropH,
+                    border_px: BORDER_PX,
+                    borderedW_px: cropW + 2 * BORDER_PX,
+                    borderedH_px: cropH + 2 * BORDER_PX,
+                    aspectRatio: config.cmW / config.cmH,
+                    layoutCols: config.layoutCols,
+                    layoutRows: config.layoutRows,
+                    guide1_cm: config.guide1,
+                    guide2_val: config.guide2,
+                    baseName: config.name,
+                    sizeString: config.sizeString,
+                    descKey: config.descKey
+                };
+
+                updateGuidelineDescription();
+
+                const cyanColor = 'rgba(0, 255, 255, 0.6)';
+                if (currentDimensions.guide1_cm !== null) {
+                    const topPos1 = `calc(${currentDimensions.guide1_cm} / ${currentDimensions.cmH} * 100%)`;
+                    rootStyle.setProperty('--guideline1-top', topPos1);
+                    rootStyle.setProperty('--guideline1-color', cyanColor);
+                } else {
+                     rootStyle.setProperty('--guideline1-top', '0%');
+                }
+                if (currentDimensions.guide2_val !== null) {
+                    let topPos2 = '';
+                    if (currentDimensions.guide2_val < 1) {
+                        topPos2 = `${currentDimensions.guide2_val * 100}%`;
+                    } else {
+                        topPos2 = `calc(${currentDimensions.guide2_val} / ${currentDimensions.cmH} * 100%)`;
+                    }
+                    rootStyle.setProperty('--guideline2-top', topPos2);
+                    rootStyle.setProperty('--guideline2-color', cyanColor);
+                    rootStyle.setProperty('--guideline2-display', 'block');
+                } else {
+                    rootStyle.setProperty('--guideline2-display', 'none');
+                }
+            }
+
+            function initializeCropper(imageUrl) {
+                if (cropper) { cropper.destroy(); cropper = null; }
+                sourceImage.src = imageUrl;
+                sourceImage.style.opacity = '1';
+                cropSection.classList.remove('hidden');
+                resultSection.classList.add('hidden');
+                resetDownloadLinks();
+
+                cropper = new Cropper(sourceImage, {
+                    aspectRatio: currentDimensions.aspectRatio,
+                    viewMode: 1, dragMode: 'move', background: false, autoCropArea: 0.8,
+                    zoomable: true, movable: true, cropBoxResizable: true, zoomOnWheel: false,
+                    ready: function () {
+                        cropButton.disabled = false;
+                        previousSliderValue = 50;
+                        zoomSlider.value = 50;
+                        rotateSlider.value = 0;
+                    }
+                });
+            }
+
+            function generateBorderedImage(croppedCanvas) {
+                const localBorderedCanvas = document.createElement('canvas');
+                const ctx = localBorderedCanvas.getContext('2d');
+
+                localBorderedCanvas.width = currentDimensions.borderedW_px;
+                localBorderedCanvas.height = currentDimensions.borderedH_px;
+
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, localBorderedCanvas.width, localBorderedCanvas.height);
+                ctx.drawImage(croppedCanvas, currentDimensions.border_px, currentDimensions.border_px, currentDimensions.cropW_px, currentDimensions.cropH_px);
+
+                const previewCtx = borderedCanvas.getContext('2d');
+                borderedCanvas.width = currentDimensions.borderedW_px;
+                borderedCanvas.height = currentDimensions.borderedH_px;
+                previewCtx.drawImage(localBorderedCanvas, 0, 0);
+
+                try {
+                    localBorderedCanvas.toBlob(function(blob) {
+                        if (blob) {
+                            const url = URL.createObjectURL(blob);
+                            if (downloadBordered._objectURL) {
+                                URL.revokeObjectURL(downloadBordered._objectURL);
+                            }
+                            downloadBordered.href = url;
+                            downloadBordered._objectURL = url;
+
+                            const now = new Date();
+                            const hours = now.getHours().toString().padStart(2, '0');
+                            const minutes = now.getMinutes().toString().padStart(2, '0');
+                            const timeString = hours + minutes;
+                            const sizeName = currentDimensions.sizeString || currentDimensions.baseName;
+                            downloadBordered.download = `漢堡影像_${sizeName}_single_${timeString}.png`;
+                            downloadBordered.classList.remove('disabled');
+                        } else {
+                            throw new Error("Canvas toBlob returned null.");
+                        }
+                    }, 'image/png');
+                } catch (e) {
+                    console.error("建立帶邊框圖片的 Blob/URL 時出錯:", e);
+                    downloadBordered.classList.add('disabled');
+                    downloadBordered.href = '#';
+                }
+                return localBorderedCanvas;
+            }
+
+            function drawQrErrorPlaceholder(ctx, x, y, size, rotation = 0) {
+                 const drawSize = size > 0 ? size : 100;
+                 const drawX = !isNaN(x) && isFinite(x) ? x : 10;
+                 const drawY = !isNaN(y) && isFinite(y) ? y : 10;
+
+                 ctx.save();
+                 if (rotation !== 0) {
+                     const centerX = drawX + drawSize / 2;
+                     const centerY = drawY + drawSize / 2;
+                     ctx.translate(centerX, centerY);
+                     ctx.rotate(rotation);
+                     ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                     ctx.fillRect(-drawSize / 2, -drawSize / 2, drawSize, drawSize);
+                     ctx.strokeStyle = 'red'; ctx.lineWidth = 2;
+                     ctx.strokeRect(-drawSize / 2, -drawSize / 2, drawSize, drawSize);
+                     ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                     ctx.font = `bold ${Math.round(drawSize * 0.2)}px sans-serif`;
+                     ctx.fillText('QR ERR', 0, 0);
+                 } else {
+                     ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                     ctx.fillRect(drawX, drawY, drawSize, drawSize);
+                     ctx.strokeStyle = 'red'; ctx.lineWidth = 2;
+                     ctx.strokeRect(drawX, drawY, drawSize, drawSize);
+                     ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                     ctx.font = `bold ${Math.round(drawSize * 0.2)}px sans-serif`;
+                     ctx.fillText('QR ERR', drawX + drawSize / 2, drawY + drawSize / 2);
+                 }
+                 ctx.restore();
+            }
+
+            function updateLayoutDownloadLink() {
+                 try {
+                    layoutCanvas.toBlob(function(blob) {
+                        if (blob) {
+                            const url = URL.createObjectURL(blob);
+                             if (downloadLayout._objectURL) {
+                                URL.revokeObjectURL(downloadLayout._objectURL);
+                            }
+                            downloadLayout.href = url;
+                            downloadLayout._objectURL = url;
+
+                            const now = new Date();
+                            const hours = now.getHours().toString().padStart(2, '0');
+                            const minutes = now.getMinutes().toString().padStart(2, '0');
+                            const timeString = hours + minutes;
+                            const sizeName = currentDimensions.sizeString || currentDimensions.baseName;
+                            downloadLayout.download = `漢堡影像_${sizeName}_layout_${timeString}.png`;
+                            downloadLayout.classList.remove('disabled');
+                        } else {
+                             throw new Error("Canvas toBlob returned null for layout.");
+                        }
+                    }, 'image/png');
+                } catch (e) {
+                    console.error("建立排版圖片 Blob/URL 時出錯:", e);
+                    downloadLayout.classList.add('disabled');
+                    downloadLayout.href = '#';
+                }
+            }
+
+            function findOptimalFontSize(ctx, text, maxWidth, maxHeight, initialSizePt, fontFamily) {
+                let fontSize = initialSizePt;
+                let textWidth = Infinity;
+                let textHeight = Infinity;
+
+                maxWidth = Math.max(1, maxWidth);
+                maxHeight = Math.max(1, maxHeight);
+
+                while (fontSize > 5) {
+                    const currentFont = `bold ${fontSize}px ${fontFamily}`;
+                    ctx.font = currentFont;
+                    const metrics = ctx.measureText(text);
+                    textWidth = metrics.width;
+                    textHeight = fontSize * 1.2;
+
+                    if (textWidth <= maxWidth && textHeight <= maxHeight) {
+                        return { font: currentFont, width: textWidth, height: textHeight };
+                    }
+                    fontSize -= 1;
+                }
+
+                const finalFont = `bold ${fontSize}px ${fontFamily}`;
+                ctx.font = finalFont;
+                const finalMetrics = ctx.measureText(text);
+                return { font: finalFont, width: finalMetrics.width, height: fontSize * 1.2 };
+            }
+
+            function generateQrImage(qrValue, targetSize, callback) {
+                if (typeof QRious !== 'function') {
+                    callback(new Error("QRious library not loaded"), null);
+                    return;
+                }
+                if (targetSize <= 0 || isNaN(targetSize) || !isFinite(targetSize)) {
+                    callback(new Error(`Invalid QR code size: ${targetSize}`), null);
+                    return;
+                }
+                try {
+                    const qr = new QRious({ value: qrValue, size: targetSize, level: 'M', padding: Math.max(1, Math.round(targetSize * 0.05)), background: 'white', foreground: 'black' });
+                    const tempQrImage = new Image();
+                    tempQrImage.onload = () => {
+                        callback(null, tempQrImage);
+                    };
+                    tempQrImage.onerror = (err) => {
+                        callback(new Error("Failed to load generated QR image"), null);
+                    };
+                    tempQrImage.src = qr.toDataURL();
+                } catch (qrError) {
+                    callback(qrError, null);
+                }
+            }
+
+            function generateLayoutImageWithCutlines(sourceCanvasForLayout) {
+                const ctx = layoutCanvas.getContext('2d');
+                const LAYOUT_WIDTH_PX = Math.round(6 * DPI);
+                const LAYOUT_HEIGHT_PX = Math.round(4 * DPI);
+
+                layoutCanvas.width = LAYOUT_WIDTH_PX;
+                layoutCanvas.height = LAYOUT_HEIGHT_PX;
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, layoutCanvas.width, layoutCanvas.height);
+
+                const numCols = currentDimensions.layoutCols;
+                const numRows = currentDimensions.layoutRows;
+                const imageWidth = currentDimensions.borderedW_px;
+                const imageHeight = currentDimensions.borderedH_px;
+
+                const gridWidth = numCols * imageWidth;
+                const gridHeight = numRows * imageHeight;
+                const offsetX = GRID_LEFT_MARGIN_PX;
+                const offsetY = Math.round((LAYOUT_HEIGHT_PX - gridHeight) / 2);
+
+                for (let row = 0; row < numRows; row++) {
+                    for (let col = 0; col < numCols; col++) {
+                        const x = offsetX + col * imageWidth;
+                        const y = offsetY + row * imageHeight;
+                        if (sourceCanvasForLayout && sourceCanvasForLayout.width > 0 && sourceCanvasForLayout.height > 0) {
+                            ctx.drawImage(sourceCanvasForLayout, x, y, imageWidth, imageHeight);
+                        } else {
+                            ctx.fillStyle = '#eee'; ctx.fillRect(x, y, imageWidth, imageHeight);
+                            ctx.fillStyle = 'red'; ctx.font = '24px sans-serif'; ctx.fillText('錯誤', x + 20, y + 40);
+                        }
+                    }
+                }
+
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+                ctx.lineWidth = 2;
+
+                for (let col = 0; col <= numCols; col++) {
+                    const x = offsetX + col * imageWidth;
+                    ctx.beginPath(); ctx.moveTo(x + 0.5, offsetY); ctx.lineTo(x + 0.5, offsetY + gridHeight); ctx.stroke();
+                }
+                for (let row = 0; row <= numRows; row++) {
+                    const y = offsetY + row * imageHeight;
+                    ctx.beginPath(); ctx.moveTo(offsetX, y + 0.5); ctx.lineTo(offsetX + gridWidth, y + 0.5); ctx.stroke();
+                }
+
+                let qrErrorOccurred = false;
+                const removeQr = removeQrCheckbox.checked;
+
+                try {
+                    const qrCodeText = "https://www.rice-photo.com/";
+                    const brandText = translations[currentLang]?.brandText || "Rice漢堡影像紀實";
+                    const fontFamily = 'Huninn, sans-serif';
+                    const padding = Math.round(40 * (DPI / 600));
+
+                    const rightMarginStartX = offsetX + gridWidth;
+                    const availableDrawingWidth = LAYOUT_WIDTH_PX - rightMarginStartX - RIGHT_MARGIN_PX;
+                    const availableDrawingHeight = LAYOUT_HEIGHT_PX - padding * 2;
+
+                    const defaultQrCodeSize = Math.round(320 * (DPI / 600));
+                    const defaultSpacing = Math.round(20 * (DPI / 600));
+                    const defaultTextFontSize = Math.round(52 * (DPI / 600));
+                    const defaultTextFont = `bold ${defaultTextFontSize}px ${fontFamily}`;
+
+                    ctx.font = defaultTextFont;
+                    const defaultTextMetrics = ctx.measureText(brandText);
+                    const defaultTextWidth = defaultTextMetrics.width;
+                    const defaultTotalVerticalBlockHeight = defaultTextFontSize * 1.2 + defaultSpacing + defaultQrCodeSize;
+                    const defaultBlockWidth = Math.max(defaultTextWidth, defaultQrCodeSize);
+                    const defaultBlockBottomY = LAYOUT_HEIGHT_PX - BOTTOM_MARGIN_PX;
+                    const defaultBlockStartY = defaultBlockBottomY - defaultTotalVerticalBlockHeight;
+
+                    if (availableDrawingWidth >= defaultBlockWidth && defaultBlockStartY >= padding) {
+                        const drawingCenterX = rightMarginStartX + availableDrawingWidth / 2;
+                        const textX = drawingCenterX;
+                        const textY = defaultBlockStartY + defaultTextFontSize * 0.8;
+                        const qrCodeX = drawingCenterX - defaultQrCodeSize / 2;
+                        const qrCodeY = defaultBlockStartY + defaultTextFontSize * 1.2 + defaultSpacing;
+
+                        if (!removeQr) {
+                            ctx.font = defaultTextFont; ctx.fillStyle = "#555555"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+                            ctx.fillText(brandText, textX, textY);
+
+                            generateQrImage(qrCodeText, defaultQrCodeSize, (error, qrImage) => {
+                                if (error || !qrImage) {
+                                    qrErrorOccurred = true;
+                                    drawQrErrorPlaceholder(ctx, qrCodeX, qrCodeY, defaultQrCodeSize);
+                                } else {
+                                    ctx.drawImage(qrImage, qrCodeX, qrCodeY, defaultQrCodeSize, defaultQrCodeSize);
+                                }
+                                updateLayoutDownloadLink();
+                            });
+                        } else {
+                             updateLayoutDownloadLink();
+                        }
+
+                    } else {
+
+                        const insetLeftX = rightMarginStartX + ALT_ROTATED_INSET_MARGIN_PX;
+                        const insetRightX = LAYOUT_WIDTH_PX - RIGHT_MARGIN_PX - ALT_ROTATED_RIGHT_INSET_MARGIN_PX;
+                        const rotatedAvailableWidth = insetRightX - insetLeftX;
+
+                        let qrSize = Math.max(1, rotatedAvailableWidth);
+
+                        const textFont = defaultTextFont;
+                        ctx.font = textFont;
+                        const textMetrics = ctx.measureText(brandText);
+                        const textWidth = textMetrics.width;
+                        const textHeight = defaultTextFontSize * 1.2;
+
+                        const rotatedTextHeight = textWidth;
+                        const targetTextLeftY = LAYOUT_HEIGHT_PX - ALT_ROTATED_BOTTOM_MARGIN_PX;
+                        const textTopY = targetTextLeftY - rotatedTextHeight;
+                        const targetQrLeftY = textTopY - ALT_ROTATED_QR_TEXT_GAP_PX;
+                        const maxQrHeightAvailable = targetQrLeftY - padding;
+                        qrSize = Math.max(1, Math.min(qrSize, maxQrHeightAvailable));
+
+                        const rotatedQrWidth = qrSize;
+
+                        const centerX = insetLeftX + rotatedAvailableWidth / 2;
+
+                        const textCenterY = targetTextLeftY - rotatedTextHeight / 2;
+                        const qrCenterY = targetQrLeftY - qrSize / 2;
+
+
+                        if (qrSize > 0 && textWidth > 0 && isFinite(centerX) && isFinite(textCenterY) && isFinite(qrCenterY)) {
+                            if (!removeQr) {
+                                generateQrImage(qrCodeText, qrSize, (error, qrImage) => {
+                                    const rotationAngle = -Math.PI / 2;
+
+                                    if (error || !qrImage) {
+                                        qrErrorOccurred = true;
+                                        const placeholderX = centerX - rotatedQrWidth / 2;
+                                        const placeholderY = qrCenterY - qrSize / 2;
+                                        drawQrErrorPlaceholder(ctx, placeholderX, placeholderY, qrSize, rotationAngle);
+                                    } else {
+                                        ctx.save();
+                                        ctx.translate(centerX, qrCenterY);
+                                        ctx.rotate(rotationAngle);
+                                        ctx.drawImage(qrImage, -qrSize / 2, -qrSize / 2, qrSize, qrSize);
+                                        ctx.restore();
+                                    }
+
+                                    ctx.save();
+                                    ctx.translate(centerX, textCenterY);
+                                    ctx.rotate(rotationAngle);
+                                    ctx.font = textFont;
+                                    ctx.fillStyle = "#555555";
+                                    ctx.textAlign = "center";
+                                    ctx.textBaseline = "middle";
+                                    ctx.fillText(brandText, 0, 0);
+                                    ctx.restore();
+
+                                    updateLayoutDownloadLink();
+                                });
+                            } else {
+                                updateLayoutDownloadLink();
+                            }
+                        } else {
+                            qrErrorOccurred = true;
+                            if (!removeQr) {
+                                drawQrErrorPlaceholder(ctx, rightMarginStartX + availableDrawingWidth / 2 - 50, padding + availableDrawingHeight / 2 - 50, 100);
+                            }
+                            updateLayoutDownloadLink();
+                        }
+                    }
+
+                } catch (e) {
+                    qrErrorOccurred = true;
+                    try { drawQrErrorPlaceholder(ctx, LAYOUT_WIDTH_PX - 150, LAYOUT_HEIGHT_PX - 150, 100); } catch (e2) { console.error("繪製錯誤佔位符失敗:", e2); }
+                    updateLayoutDownloadLink();
+                }
+            }
+
+            function resetDownloadLinks() {
+                downloadBordered.classList.add('disabled'); downloadBordered.href = '#';
+                downloadLayout.classList.add('disabled'); downloadLayout.href = '#';
+                clearCanvas(borderedCanvas); clearCanvas(layoutCanvas);
+                borderedPreviewBox.classList.add('hidden'); layoutPreviewBox.classList.add('hidden');
+                croppedCanvasForLayout = null;
+            }
+
+            function clearCanvas(canvas) {
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                 if (canvas.width > 0 && canvas.height > 0) { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+                 canvas.width = 1;
+                 canvas.height = 1;
+            }
+
+            sizeSelectionContainer.addEventListener('change', (event) => {
+                if (event.target.name === 'photoSize') {
+                    const newSize = event.target.value;
+                    updateConfigAndDimensions(newSize);
+                    try {
+                        if (sourceImage.src && sourceImage.src !== window.location.href && !sourceImage.src.startsWith('blob:') && sourceImage.src.length > 10 && sourceImage.naturalWidth > 0) {
+                            initializeCropper(sourceImage.src);
+                        } else if (cropper) {
+                            cropper.destroy(); cropper = null;
+                            sourceImage.src = ''; sourceImage.style.opacity = '0';
+                            cropSection.classList.add('hidden'); resultSection.classList.add('hidden');
+                            cropButton.disabled = true; resetDownloadLinks();
+                        }
+                    } catch (e) {
+                         if (cropper) { cropper.destroy(); cropper = null; }
+                         sourceImage.src = ''; sourceImage.style.opacity = '0';
+                         cropSection.classList.add('hidden'); resultSection.classList.add('hidden');
+                         cropButton.disabled = true; resetDownloadLinks();
+                    }
+                }
+            });
+
+            function processFile(file) {
+                if (!file || !file.type.startsWith('image/')) {
+                    alert(translations[currentLang]?.alertInvalidFile || '請選擇或拖曳有效的圖片檔案 (例如 JPG, PNG, GIF)。');
+                    return;
+                }
+                originalFileName = file.name.split('.').slice(0, -1).join('.') || 'image';
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    updateConfigAndDimensions(document.querySelector('input[name="photoSize"]:checked').value);
+                    initializeCropper(e.target.result);
+                };
+                reader.onerror = (e) => {
+                    alert(translations[currentLang]?.alertReadFileError || "讀取圖片檔案時發生錯誤，請檢查檔案是否損毀或更換檔案。");
+                };
+                reader.readAsDataURL(file);
+             }
+
+            imageUpload.addEventListener('change', (event) => {
+                const files = event.target.files;
+                if (files && files.length > 0) { processFile(files[0]); }
+            });
+
+            if (dropZone) {
+                dropZone.addEventListener('dragover', (event) => { event.preventDefault(); dropZone.classList.add('drag-over'); });
+                dropZone.addEventListener('dragleave', (event) => { event.preventDefault(); dropZone.classList.remove('drag-over'); });
+                dropZone.addEventListener('drop', (event) => {
+                    event.preventDefault(); dropZone.classList.remove('drag-over');
+                    const files = event.dataTransfer.files;
+                    if (files.length > 0) { processFile(files[0]); }
+                });
+            } else { console.error("拖放區域元素 (#dropZone) 未找到！"); }
+
+            cropButton.addEventListener('click', () => {
+                if (!cropper) { return; }
+                cropButton.disabled = true;
+                loadingIndicator.classList.remove('hidden');
+                resultSection.classList.add('hidden');
+
+                setTimeout(() => {
+                    try {
+                        const croppedCanvas = cropper.getCroppedCanvas({
+                            width: currentDimensions.cropW_px,
+                            height: currentDimensions.cropH_px,
+                            imageSmoothingEnabled: true, imageSmoothingQuality: 'high'
+                        });
+                        if (!croppedCanvas || croppedCanvas.width === 0 || croppedCanvas.height === 0) {
+                            throw new Error(translations[currentLang]?.errorGetCroppedImage || "無法獲取有效的裁切圖片 (裁切畫布無效)。");
+                        }
+
+                        croppedCanvasForLayout = generateBorderedImage(croppedCanvas);
+                        if (!croppedCanvasForLayout || croppedCanvasForLayout.width === 0 || croppedCanvasForLayout.height === 0) {
+                            throw new Error(translations[currentLang]?.errorGenerateBordered || "無法產生有效的帶白邊圖片 (帶邊框畫布無效)。");
+                        }
+
+                        generateLayoutImageWithCutlines(croppedCanvasForLayout);
+
+                        resultSection.classList.remove('hidden');
+                        borderedPreviewBox.classList.remove('hidden');
+                        layoutPreviewBox.classList.remove('hidden');
+
+                    } catch (error) {
+                        alert(`${translations[currentLang]?.alertProcessingError || '處理圖片時發生錯誤:'} ${error.message}\n${translations[currentLang]?.alertTryAgain || '請嘗試重新整理頁面或更換圖片。'}`);
+                        resultSection.classList.add('hidden');
+                    } finally {
+                        loadingIndicator.classList.add('hidden');
+                        if (cropper) {
+                             cropButton.disabled = false;
+                        }
+                    }
+                }, 50);
+            });
+
+            zoomSlider.addEventListener('input', (event) => {
+                if (!cropper) return;
+                const currentSliderValue = parseInt(event.target.value, 10);
+                const scaleFactor = 0.01;
+                const zoomAmount = (currentSliderValue - previousSliderValue) * scaleFactor;
+                cropper.zoom(zoomAmount);
+                previousSliderValue = currentSliderValue;
+            });
+
+            rotateSlider.addEventListener('input', (event) => {
+                if (!cropper) return;
+                const degree = parseInt(event.target.value, 10);
+                cropper.rotateTo(degree);
+            });
+
+            window.addEventListener('dragover', (event) => { event.preventDefault(); });
+            window.addEventListener('drop', (event) => { event.preventDefault(); });
+
+            if (imageModal && modalContent && modalImage && closeModalButton && borderedCanvas && layoutCanvas) {
+                function openModal(sourceCanvas) {
+                    if (!sourceCanvas || sourceCanvas.width <= 1 || sourceCanvas.height <= 1) {
+                        return;
+                    }
+                    try {
+                        const dataURL = sourceCanvas.toDataURL('image/png');
+                        if (!dataURL || dataURL === 'data:,') {
+                             return;
+                        }
+                        modalImage.src = dataURL;
+                        modalImage.alt = translations[currentLang]?.modalImageAlt || "Enlarged Preview";
+                        imageModal.classList.remove('hidden');
+                    } catch (e) {
+                        alert(translations[currentLang]?.modalError || "Error previewing image.");
+                    }
+                }
+
+                function closeModal() {
+                    imageModal.classList.add('hidden');
+                    modalImage.src = "";
+                }
+
+                borderedCanvas.addEventListener('click', () => openModal(borderedCanvas));
+                layoutCanvas.addEventListener('click', () => openModal(layoutCanvas));
+                closeModalButton.addEventListener('click', closeModal);
+                imageModal.addEventListener('click', (event) => {
+                    if (event.target === imageModal) {
+                        closeModal();
+                    }
+                });
+            } else {
+                console.error("Modal 或 Canvas 元素未找到，無法附加事件監聽器。");
+            }
+
+            langButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const lang = button.dataset.lang;
+                    translatePage(lang);
+                });
+            });
+
+            let initialLang = 'zh-Hant';
+            try {
+                const savedLang = localStorage.getItem('preferredLang');
+                if (savedLang && translations[savedLang]) {
+                    initialLang = savedLang;
+                } else {
+                    const browserLang = navigator.language || navigator.userLanguage;
+                    if (browserLang.startsWith('en') && translations['en']) {
+                         initialLang = 'en';
+                    } else if (browserLang.startsWith('zh-Hant') && translations['zh-Hant']) {
+                         initialLang = 'zh-Hant';
+                    }
+                }
+            } catch(e) {
+                 console.warn("Could not access localStorage to get preferred language.");
+            }
+
+            translatePage(initialLang);
+            updateConfigAndDimensions(document.querySelector('input[name="photoSize"]:checked').value);
+            cropButton.disabled = true;
+
+      });
+    </script>
+
+</body>
+</html>
